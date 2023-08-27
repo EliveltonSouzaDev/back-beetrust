@@ -10,7 +10,7 @@ app.use(express.urlencoded({ extended: true }));
 
 app.get("/", async (req, res) => {
     try {
-        const snapshot = await Product.get();
+        const snapshot = await Product.orderBy("createdAt", "desc").get();
 
         if (snapshot.empty) {
             res.status(404).send({ msg: "No products found" });
@@ -49,9 +49,9 @@ app.get("/:id", async (req, res) => {
     }
 });
 
-app.get("/filter/byCategory", async (req, res) => {
+app.get("/filter/:category", async (req, res) => {
     try {
-        const category = req.body.category;
+        const category = req.params.category;
         const querySnapshot = await Product.where("category", "==", category).get();
 
         if (querySnapshot.empty) {
@@ -59,7 +59,9 @@ app.get("/filter/byCategory", async (req, res) => {
         } else {
             const products = [];
             querySnapshot.forEach((doc) => {
-                products.push(doc.data());
+                const productData = doc.data();
+                const productWithId = { id: doc.id, ...productData };
+                products.push(productWithId);
             });
             res.send(products);
         }
@@ -68,7 +70,8 @@ app.get("/filter/byCategory", async (req, res) => {
     }
 });
 
-app.post("/add", async (req, res) => {
+app.post("/add-product", async (req, res) => {
+    console.log(req.body);
     try {
         const currentDate = new Date();
         const formattedDateTime = format(currentDate, "MM/dd/yyyy HH:mm:ss");
@@ -86,6 +89,7 @@ app.post("/add", async (req, res) => {
         await Product.add(productJson);
         res.send({ msg: "Product added to database" });
     } catch (error) {
+        console.log(error);
         res.status(500).send({ msg: error });
     }
 });
