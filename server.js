@@ -70,6 +70,27 @@ app.get("/filter/:category", async (req, res) => {
     }
 });
 
+app.get("/myAdverts/:walletId", async (req, res) => {
+    try {
+        const walletId = req.params.walletId;
+        const querySnapshot = await Product.where("walletId", "==", walletId).get();
+
+        if (querySnapshot.empty) {
+            res.status(404).send([{ msg: "No products found for this walletId" }]);
+        } else {
+            const products = [];
+            querySnapshot.forEach((doc) => {
+                const productData = doc.data();
+                const productWithId = { id: doc.id, ...productData };
+                products.push(productWithId);
+            });
+            res.send(products);
+        }
+    } catch (error) {
+        res.status(500).send({ msg: "An error occurred" });
+    }
+});
+
 app.post("/add-product", async (req, res) => {
     console.log(req.body);
     try {
