@@ -115,7 +115,7 @@ app.post("/add-product", async (req, res) => {
     }
 });
 
-app.post("/update", async (req, res) => {
+app.put("/update", async (req, res) => {
     try {
         const id = req.body.id;
         delete req.body.id;
