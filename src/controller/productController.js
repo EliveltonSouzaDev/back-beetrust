@@ -1,14 +1,7 @@
-const express = require("express");
-const app = express();
-const Product = require("./config.js");
+const Product = require("../configs/config.js");
 const format = require("date-fns/format");
-const cors = require("cors");
 
-app.use(cors());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-
-app.get("/", async (req, res) => {
+const getAllProducts = async (req, res) => {
     try {
         const snapshot = await Product.orderBy("createdAt", "desc").get();
 
@@ -26,9 +19,9 @@ app.get("/", async (req, res) => {
     } catch (error) {
         res.status(500).send({ msg: error });
     }
-});
+};
 
-app.get("/:id", async (req, res) => {
+const getProductById = async (req, res) => {
     try {
         const productId = req.params.id;
 
@@ -47,9 +40,9 @@ app.get("/:id", async (req, res) => {
     } catch (error) {
         res.status(500).send({ msg: error });
     }
-});
+};
 
-app.get("/filter/:category", async (req, res) => {
+const getProductByCategory = async (req, res) => {
     try {
         const category = req.params.category;
         const querySnapshot = await Product.where("category", "==", category).get();
@@ -68,9 +61,9 @@ app.get("/filter/:category", async (req, res) => {
     } catch (error) {
         res.status(500).send({ msg: "An error occurred" });
     }
-});
+};
 
-app.get("/myAdverts/:walletId", async (req, res) => {
+const getMyProducts = async (req, res) => {
     try {
         const walletId = req.params.walletId;
         const querySnapshot = await Product.where("walletId", "==", walletId).get();
@@ -89,9 +82,9 @@ app.get("/myAdverts/:walletId", async (req, res) => {
     } catch (error) {
         res.status(500).send({ msg: "An error occurred" });
     }
-});
+};
 
-app.post("/add-product", async (req, res) => {
+const addNewProduct = async (req, res) => {
     console.log(req.body);
     try {
         const currentDate = new Date();
@@ -113,9 +106,9 @@ app.post("/add-product", async (req, res) => {
         console.log(error);
         res.status(500).send({ msg: error });
     }
-});
+};
 
-app.put("/update", async (req, res) => {
+const updateProduct = async (req, res) => {
     try {
         const id = req.body.id;
         delete req.body.id;
@@ -140,9 +133,9 @@ app.put("/update", async (req, res) => {
     } catch (error) {
         res.status(500).send({ msg: error });
     }
-});
+};
 
-app.delete("/delete", async (req, res) => {
+const deleteProduct = async (req, res) => {
     try {
         const id = req.body.id;
         const deletedProductRef = Product.doc(id);
@@ -161,9 +154,15 @@ app.delete("/delete", async (req, res) => {
     } catch (error) {
         res.status(500).send({ msg: error });
     }
-});
+};
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-    console.log(`Server is running on port ${PORT}`);
-});
+
+module.exports = {
+    getAllProducts,
+    getProductById,
+    getProductByCategory,
+    getMyProducts,
+    addNewProduct,
+    updateProduct,
+    deleteProduct,
+}
