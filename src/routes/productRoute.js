@@ -21,4 +21,6 @@ router.put("/update", productController.updateProduct);
 
 router.delete("/delete", productController.deleteProduct);
 
+router.get("/search/:search", productController.searchProduct);
+
 module.exports = router;

@@ -85,7 +85,6 @@ const getMyProducts = async (req, res) => {
 };
 
 const addNewProduct = async (req, res) => {
-    console.log(req.body);
     try {
         const currentDate = new Date();
         const formattedDateTime = format(currentDate, "MM/dd/yyyy HH:mm:ss");
@@ -156,6 +155,32 @@ const deleteProduct = async (req, res) => {
     }
 };
 
+const searchProduct = async (req, res) => {
+    try {
+        const searchTerm = req.params.search;
+        const snapshot = await Product.orderBy("createdAt", "desc").get();
+
+        const matchingProducts = [];
+
+        snapshot.forEach((doc) => {
+            const productData = doc.data();
+            const { title, description } = productData;
+
+            if (title.includes(searchTerm) || description.includes(searchTerm)) {
+                matchingProducts.push({ id: doc.id, ...productData });
+            }
+        });
+
+        res.send(matchingProducts);
+    } catch (error) {
+        res.status(500).send({ msg: error.message });
+    }
+};
+
+
+
+
+
 
 module.exports = {
     getAllProducts,
@@ -165,4 +190,5 @@ module.exports = {
     addNewProduct,
     updateProduct,
     deleteProduct,
+    searchProduct
 }
