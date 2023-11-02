@@ -1,4 +1,4 @@
-const Product = require("../configs/config.js");
+const { Product } = require("../configs/config.js");
 const format = require("date-fns/format");
 
 const getAllProducts = async (req, res) => {
@@ -18,6 +18,8 @@ const getAllProducts = async (req, res) => {
         res.send(productList);
     } catch (error) {
         res.status(500).send({ msg: error });
+        throw error;
+
     }
 };
 
@@ -59,7 +61,9 @@ const getProductByCategory = async (req, res) => {
             res.send(products);
         }
     } catch (error) {
-        res.status(500).send({ msg: "An error occurred" });
+        res.status(500).send({ msg: error });
+        throw error;
+
     }
 };
 
@@ -80,7 +84,7 @@ const getMyProducts = async (req, res) => {
             res.send(products);
         }
     } catch (error) {
-        res.status(500).send({ msg: "An error occurred" });
+        res.status(500).send({ msg: error });
     }
 };
 
@@ -104,6 +108,7 @@ const addNewProduct = async (req, res) => {
     } catch (error) {
         console.log(error);
         res.status(500).send({ msg: error });
+        throw error;
     }
 };
 
