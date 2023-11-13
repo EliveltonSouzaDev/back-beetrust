@@ -52,7 +52,8 @@ const sendMessage = async (req, res) => {
 
 const getUserMessages = async (req, res) => {
     try {
-        const { userId } = req.body;
+        console.log(req.params)
+        const { id } = req.params;
         const userMessages = [];
 
         const chatQuerySnapshot = await Chat.get();
@@ -88,14 +89,14 @@ const getUserMessages = async (req, res) => {
 
             const messageQuerySnapshot = await chatDoc.ref
                 .collection("Chat")
-                .where("senderId", "==", userId)
+                .where("senderId", "==", id)
                 .orderBy("createdAt", "desc")
                 .limit(1)
                 .get();
 
             const receivedMessagesQuerySnapshot = await chatDoc.ref
                 .collection("Chat")
-                .where("receiverId", "==", userId)
+                .where("receiverId", "==", id)
                 .orderBy("createdAt", "desc")
                 .limit(1)
                 .get();
@@ -147,7 +148,7 @@ const getUserMessages = async (req, res) => {
 
 const getChatMessages = async (req, res) => {
     try {
-        const { chatId } = req.body;
+        const { chatId } = req.params;
 
         const chatDoc = await Chat.doc(chatId).get();
 

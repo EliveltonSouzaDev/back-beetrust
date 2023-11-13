@@ -9,9 +9,9 @@ const router = express.Router();
 // Requests 
 router.post("/send-message", chatController.sendMessage);
 
-router.get("/get-user-messages", chatController.getUserMessages);
+router.get("/get-user-messages/:id", chatController.getUserMessages);
 
-router.get("/get-chat-messages", chatController.getChatMessages);
+router.get("/get-chat-messages/:chatId", chatController.getChatMessages);
 
 
 
