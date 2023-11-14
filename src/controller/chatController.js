@@ -5,13 +5,13 @@ const sendMessage = async (req, res) => {
     try {
         const { senderId, receiverId, message, chatId } = req.body;
 
-        const orderedIds = [senderId, receiverId].sort();
-
-        const newChatId = chatId + "_" + orderedIds[0] + "_" + orderedIds[1];
-
-        const chatDoc = await Chat.doc(newChatId).get();
+        const chatDoc = await Chat.doc(chatId).get();
 
         if (!chatDoc.exists) {
+            const orderedIds = [senderId, receiverId].sort();
+
+            const newChatId = chatId + "_" + orderedIds[0] + "_" + orderedIds[1];
+
             const newChatData = {
                 senderId,
                 receiverId,
@@ -28,7 +28,7 @@ const sendMessage = async (req, res) => {
 
             await Chat.doc(newChatId).set(newChatData);
         } else {
-            // Se o chat existir, adicione a nova mensagem às mensagens existentes no chat
+            // If the chat exists, add the new message to the existing chat messages
             const chatData = chatDoc.data();
             chatData.messages.push({
                 senderId,
@@ -37,9 +37,9 @@ const sendMessage = async (req, res) => {
                 createdAt: new Date(),
             });
 
-            await Chat.doc(newChatId).update({
+            await Chat.doc(chatId).set({
                 messages: chatData.messages
-            });
+            }, { merge: true }); // Use set with merge option to update only the messages field
         }
 
         res.send({ msg: "Message sent successfully" });
@@ -157,7 +157,13 @@ const getChatMessages = async (req, res) => {
             return;
         }
 
-        const messagesArray = chatDoc.data().messages;
+        const messagesArray = chatDoc.data().messages.map((message) => {
+            return {
+                ...message,
+                chatId: chatId
+            }
+
+        })
 
         // Sort the messages by createdAt timestamp in ascending order
         const sortedMessages = messagesArray.sort((a, b) => a.createdAt - b.createdAt);
