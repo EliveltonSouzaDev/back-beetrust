@@ -4,13 +4,18 @@ const { Chat } = require("../configs/config.js");
 const sendMessage = async (req, res) => {
     try {
         const { senderId, receiverId, message, chatId } = req.body;
+        console.log(chatId, 'chatId')
+        let chatDoc;
+        if (chatId !== null) {
+            chatDoc = await Chat.doc(chatId).get();
+        }
 
-        const chatDoc = await Chat.doc(chatId).get();
+        if (chatDoc && !chatDoc?.exists || !chatId) {
 
-        if (!chatDoc.exists) {
             const orderedIds = [senderId, receiverId].sort();
+            console.log(orderedIds, 'aaaaaa')
 
-            const newChatId = chatId + "_" + orderedIds[0] + "_" + orderedIds[1];
+            const newChatId = orderedIds[0] + "_" + orderedIds[1];
 
             const newChatData = {
                 senderId,
@@ -45,14 +50,12 @@ const sendMessage = async (req, res) => {
         res.send({ msg: "Message sent successfully" });
     } catch (error) {
         res.status(500).send({ msg: error });
-        throw error;
+        throw new Error(error);
     }
 };
 
-
 const getUserMessages = async (req, res) => {
     try {
-        console.log(req.params)
         const { id } = req.params;
         const userMessages = [];
 
@@ -60,74 +63,27 @@ const getUserMessages = async (req, res) => {
 
         for (const chatDoc of chatQuerySnapshot.docs) {
             const chatId = chatDoc.id;
+            const messagesArray = chatDoc.data().messages || [];
 
-            // Access the 'messages' array from the document data
-            const messagesArray = chatDoc.data().messages;
-
-            // Initialize variables for the latest messages
             let latestMessage = null;
 
             for (const message of messagesArray) {
-                const createdAtTimestamp = message.createdAt.toDate();
+                const createdAtTimestamp = (message.createdAt && message.createdAt.toDate()) || null;
                 const senderId = message.senderId;
                 const receiverId = message.receiverId;
                 const messageContent = message.message;
 
-                // Logic to determine the latest message within the 'messages' array
-                if (
-                    !latestMessage ||
-                    createdAtTimestamp > latestMessage.createdAt
-                ) {
-                    latestMessage = {
-                        createdAt: createdAtTimestamp,
-                        senderId,
-                        receiverId,
-                        messageContent,
-                    };
+                // Check if the message involves the specified user and has a valid timestamp
+                if ((senderId === id || receiverId === id) && createdAtTimestamp) {
+                    if (!latestMessage || createdAtTimestamp > latestMessage.createdAt) {
+                        latestMessage = {
+                            createdAt: createdAtTimestamp,
+                            senderId,
+                            receiverId,
+                            messageContent,
+                        };
+                    }
                 }
-            }
-
-            const messageQuerySnapshot = await chatDoc.ref
-                .collection("Chat")
-                .where("senderId", "==", id)
-                .orderBy("createdAt", "desc")
-                .limit(1)
-                .get();
-
-            const receivedMessagesQuerySnapshot = await chatDoc.ref
-                .collection("Chat")
-                .where("receiverId", "==", id)
-                .orderBy("createdAt", "desc")
-                .limit(1)
-                .get();
-
-            const lastSentMessage = messageQuerySnapshot.empty
-                ? null
-                : messageQuerySnapshot.docs[0].data();
-
-            const lastReceivedMessage = receivedMessagesQuerySnapshot.empty
-                ? null
-                : receivedMessagesQuerySnapshot.docs[0].data();
-
-            // Determine the latest of the sent and received messages
-            if (
-                lastReceivedMessage &&
-                (!lastSentMessage ||
-                    lastReceivedMessage.createdAt > lastSentMessage.createdAt)
-            ) {
-                latestMessage = {
-                    createdAt: lastReceivedMessage.createdAt,
-                    senderId: lastReceivedMessage.senderId,
-                    receiverId: lastReceivedMessage.receiverId,
-                    messageContent: lastReceivedMessage.message,
-                };
-            } else if (lastSentMessage) {
-                latestMessage = {
-                    createdAt: lastSentMessage.createdAt,
-                    senderId: lastSentMessage.senderId,
-                    receiverId: lastSentMessage.receiverId,
-                    messageContent: lastSentMessage.message,
-                };
             }
 
             if (latestMessage) {
@@ -138,12 +94,17 @@ const getUserMessages = async (req, res) => {
             }
         }
 
+        // Sort userMessages by the timestamp of the latest message in descending order
+        userMessages.sort((a, b) => (b.latestMessage?.createdAt || 0) - (a.latestMessage?.createdAt || 0));
+
         res.send(userMessages);
     } catch (error) {
         res.status(500).send({ msg: error });
-        throw error;
+        throw new Error(error);
     }
 };
+
+
 
 
 const getChatMessages = async (req, res) => {
@@ -170,8 +131,8 @@ const getChatMessages = async (req, res) => {
 
         res.send(sortedMessages);
     } catch (error) {
-        console.error("Error:", error);
         res.status(500).send({ msg: error.message });
+        throw new Error(error);
     }
 };
 
