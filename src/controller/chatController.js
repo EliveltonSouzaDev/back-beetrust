@@ -3,8 +3,8 @@ const { Chat } = require("../configs/config.js");
 
 const sendMessage = async (req, res) => {
     try {
-        const { senderId, receiverId, message, chatId } = req.body;
-        console.log(chatId, 'chatId')
+        const { senderId, receiverId, message, chatId, chatProductInfo } = req.body;
+        console.log(senderId, receiverId, message, chatId, chatProductInfo, 'aaaaaaaa')
         let chatDoc;
         if (chatId !== null) {
             chatDoc = await Chat.doc(chatId).get();
@@ -15,7 +15,7 @@ const sendMessage = async (req, res) => {
             const orderedIds = [senderId, receiverId].sort();
             console.log(orderedIds, 'aaaaaa')
 
-            const newChatId = orderedIds[0] + "_" + orderedIds[1];
+            const newChatId = chatProductInfo.id + "_" + orderedIds[0] + "_" + orderedIds[1];
 
             const newChatData = {
                 senderId,
@@ -28,7 +28,8 @@ const sendMessage = async (req, res) => {
                         message,
                         createdAt: new Date(),
                     }
-                ]
+                ],
+                chatProductInfo
             };
 
             await Chat.doc(newChatId).set(newChatData);
@@ -50,7 +51,9 @@ const sendMessage = async (req, res) => {
         res.send({ msg: "Message sent successfully" });
     } catch (error) {
         res.status(500).send({ msg: error });
-        throw new Error(error);
+        console.log(error);
+
+        // throw new Error(error);
     }
 };
 
@@ -64,6 +67,7 @@ const getUserMessages = async (req, res) => {
         for (const chatDoc of chatQuerySnapshot.docs) {
             const chatId = chatDoc.id;
             const messagesArray = chatDoc.data().messages || [];
+            const chatProductInfo = chatDoc.data().chatProductInfo;
 
             let latestMessage = null;
 
@@ -72,7 +76,6 @@ const getUserMessages = async (req, res) => {
                 const senderId = message.senderId;
                 const receiverId = message.receiverId;
                 const messageContent = message.message;
-
                 // Check if the message involves the specified user and has a valid timestamp
                 if ((senderId === id || receiverId === id) && createdAtTimestamp) {
                     if (!latestMessage || createdAtTimestamp > latestMessage.createdAt) {
@@ -90,6 +93,7 @@ const getUserMessages = async (req, res) => {
                 userMessages.push({
                     chatId,
                     latestMessage,
+                    chatProductInfo
                 });
             }
         }
@@ -99,8 +103,8 @@ const getUserMessages = async (req, res) => {
 
         res.send(userMessages);
     } catch (error) {
+        console.log(error);
         res.status(500).send({ msg: error });
-        throw new Error(error);
     }
 };
 
@@ -112,6 +116,7 @@ const getChatMessages = async (req, res) => {
         const { chatId } = req.params;
 
         const chatDoc = await Chat.doc(chatId).get();
+        const chatProductInfo = chatDoc.data().chatProductInfo;
 
         if (!chatDoc.exists) {
             res.status(404).send({ msg: "Chat not found" });
@@ -121,7 +126,8 @@ const getChatMessages = async (req, res) => {
         const messagesArray = chatDoc.data().messages.map((message) => {
             return {
                 ...message,
-                chatId: chatId
+                chatId: chatId,
+                chatProductInfo
             }
 
         })
@@ -132,7 +138,6 @@ const getChatMessages = async (req, res) => {
         res.send(sortedMessages);
     } catch (error) {
         res.status(500).send({ msg: error.message });
-        throw new Error(error);
     }
 };
 
