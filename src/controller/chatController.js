@@ -6,16 +6,24 @@ const sendMessage = async (req, res) => {
         const { senderId, receiverId, message, chatId, chatProductInfo } = req.body;
         console.log(senderId, receiverId, message, chatId, chatProductInfo, 'aaaaaaaa')
         let chatDoc;
-        if (chatId !== null) {
+        let newChatId;
+
+
+        if (!chatId) {
+            const orderedIds = [senderId, receiverId].sort();
+
+            newChatId = chatProductInfo.id + "_" + orderedIds[0] + "_" + orderedIds[1];
+
+            chatDoc = await Chat.doc(newChatId).get();
+        } else {
             chatDoc = await Chat.doc(chatId).get();
         }
 
         if (chatDoc && !chatDoc?.exists || !chatId) {
 
             const orderedIds = [senderId, receiverId].sort();
-            console.log(orderedIds, 'aaaaaa')
 
-            const newChatId = chatProductInfo.id + "_" + orderedIds[0] + "_" + orderedIds[1];
+            newChatId = chatProductInfo.id + "_" + orderedIds[0] + "_" + orderedIds[1];
 
             const newChatData = {
                 senderId,
@@ -48,7 +56,7 @@ const sendMessage = async (req, res) => {
             }, { merge: true }); // Use set with merge option to update only the messages field
         }
 
-        res.send({ msg: "Message sent successfully" });
+        res.send({ chatId: newChatId, msg: "Message sent successfully" });
     } catch (error) {
         res.status(500).send({ msg: error });
         console.log(error);
@@ -107,10 +115,6 @@ const getUserMessages = async (req, res) => {
         res.status(500).send({ msg: error });
     }
 };
-
-
-
-
 const getChatMessages = async (req, res) => {
     try {
         const { chatId } = req.params;
