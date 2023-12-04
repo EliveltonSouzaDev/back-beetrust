@@ -1,10 +1,108 @@
 const { Chat } = require("../configs/config.js");
+const cors = require("cors");
 
+const express = require("express");
+const socket = require("socket.io");
+const app = express();
+
+app.use(
+    cors({
+        origin: ["http://localhost:3000", "http://localhost:4000"],
+        credentials: true,
+    })
+);
+const server = app.listen(3001, function () {
+    console.log("server running on port 3001");
+});
+
+const io = socket(server, {
+    allowEIO3: true,
+    cors: {
+        origin: ["http://localhost:3000", "http://localhost:4000"],
+        methods: ["GET", "POST"],
+        credentials: true,
+    },
+});
+
+io.on("connection", function (socket) {
+    console.log(socket.id);
+    socket.on("SEND_MESSAGE", function (data) {
+        io.emit("MESSAGE", data);
+    });
+});
+
+
+const getChatMessages = async (req, res) => {
+    try {
+        const { chatId } = req.params;
+        const chatDocRef = Chat.doc(chatId);
+
+        // Fetch the initial data
+        const chatDocSnapshot = await chatDocRef.get();
+
+        if (!chatDocSnapshot.exists) {
+            res.status(404).send({ msg: "Chat not found" });
+            return;
+        }
+
+        const chatProductInfo = chatDocSnapshot.data().chatProductInfo;
+
+        const sendInitialResponse = (messages) => {
+            // Convert timestamps to milliseconds for accurate sorting
+            const sortedMessages = messages.sort((a, b) => a.createdAt - b.createdAt);
+            // Send the initial response to the client via HTTP
+            res.send(sortedMessages);
+        };
+
+        const sendUpdatedMessages = (messages) => {
+            // Emit the new messages to the client via Socket.io
+            io.emit("new-messages", messages || []);
+        };
+
+        // Map the initial messages
+        const initialMessages = (chatDocSnapshot.data().messages || []).map((message) => ({
+            ...message,
+            chatId: chatId,
+            chatProductInfo,
+        }));
+
+        // Send the initial response
+        sendInitialResponse(initialMessages);
+
+        // Watch for real-time updates on the chat document
+        const unsubscribe = chatDocRef.onSnapshot(
+            (snapshot) => {
+                const updatedMessagesArray = (snapshot.data().messages || []).map((message) => ({
+                    ...message,
+                    chatId: chatId,
+                    chatProductInfo,
+                }));
+
+                // Send the updated messages to the client via Socket.io
+                sendUpdatedMessages(updatedMessagesArray);
+            },
+            (error) => {
+                console.error("Error in onSnapshot:", error);
+                // Handle the error, if necessary
+            }
+        );
+
+        // Store the unsubscribe function in the response locals to clean up the listener
+        res.locals.unsubscribe = () => {
+            unsubscribe();
+        };
+    } catch (error) {
+        console.error(error);
+        // Send an HTTP error response if needed
+        if (!res.headersSent) {
+            res.status(500).send({ msg: error.message });
+        }
+    }
+};
 
 const sendMessage = async (req, res) => {
     try {
         const { senderId, receiverId, message, chatId, chatProductInfo } = req.body;
-        console.log(senderId, receiverId, message, chatId, chatProductInfo, 'aaaaaaaa')
         let chatDoc;
         let newChatId;
 
@@ -113,35 +211,6 @@ const getUserMessages = async (req, res) => {
     } catch (error) {
         console.log(error);
         res.status(500).send({ msg: error });
-    }
-};
-const getChatMessages = async (req, res) => {
-    try {
-        const { chatId } = req.params;
-
-        const chatDoc = await Chat.doc(chatId).get();
-        const chatProductInfo = chatDoc.data().chatProductInfo;
-
-        if (!chatDoc.exists) {
-            res.status(404).send({ msg: "Chat not found" });
-            return;
-        }
-
-        const messagesArray = chatDoc.data().messages.map((message) => {
-            return {
-                ...message,
-                chatId: chatId,
-                chatProductInfo
-            }
-
-        })
-
-        // Sort the messages by createdAt timestamp in ascending order
-        const sortedMessages = messagesArray.sort((a, b) => a.createdAt - b.createdAt);
-
-        res.send(sortedMessages);
-    } catch (error) {
-        res.status(500).send({ msg: error.message });
     }
 };
 
